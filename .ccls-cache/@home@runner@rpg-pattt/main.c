@@ -49,7 +49,9 @@ struct Entity g_kobold;
 
 //map enemys
 struct Entity* g_map_enemies;
-struct Entity** g_map_entities;
+int g_enemy_num;
+
+struct Entity* g_map_entities[100];
 int g_entity_num;
 
 //player entity
@@ -233,16 +235,17 @@ int init_map()
 	//map entities
 	struct Entity* entity[7];
 
-	int enemy_num = (sizeof(enemy) / sizeof(enemy[0]));
+	g_enemy_num = (sizeof(enemy) / sizeof(enemy[0]));
 	g_entity_num = (sizeof(entity) / sizeof(entity[0]));
 	
 	
-	for (int i = 0; i < enemy_num ; i++)
+	for (int i = 0; i < g_enemy_num ; i++)
 		{ entity[i] = &enemy[i]; }
 
 	entity[6] = &g_player;
 
-	g_map_entities = entity;
+	for (int i = 0; i < g_entity_num; i++)
+		{ g_map_entities[i] = entity[i]; }
 	
 	//map sizes
     g_main_map.x = sizeof(g_main_map.tiles[0]) / sizeof(g_main_map.tiles[0][0]);
@@ -299,13 +302,12 @@ struct Map entity_overlay()
     for(int y = 0; y < g_main_map.y; y++)
 		{ strcpy(map.tiles[y], g_main_map.tiles[y]); }
 
-	//add player to new map
-	for (int i = 0; i < 5; i++)
+	//add global entitys to new map
+	for (int i = 0; i < g_entity_num; i++)
 	{
 		struct Entity entity = *g_map_entities[i];
-    	map.tiles[entity.y][entity.x] = entity.mapChar;
+		map.tiles[entity.y][entity.x] = entity.mapChar;
 	}
-
 	
 	//return new map
     return map;
@@ -437,11 +439,32 @@ int battle_turn()
 	int enemy_atk_value = rand() % 4;
 	struct Attack enemy_atk = g_enemy.attacks[enemy_atk_value];
 
-	char text[100];
-  	// snprintf(text, sizeof(text), "%s %010d", name, i);
+	char hit_status[30];
+	int damage;
 	
-	printf("%s",text);
+	int accuracy = rand() % 100;
+	if ( accuracy < enemy_atk.accuracy ) 
+	{ 
+		strcpy(hit_status, "but it missed");
+		damage = enemy_atk.damageHit; 
+	}
+	else
+	{ 
+		strcpy(hit_status, "and it hit");
+		damage = enemy_atk.damageMiss; 
+	}
+	
+	char text[100];
+  	snprintf(text, sizeof(text), "The attacking %s used %s.", g_enemy.species, enemy_atk.name);
+
+	g_text = text;
+	
 	input();
+	return 0;
+}
+
+int battle_check(){
+
 	return 0;
 }
 
@@ -462,20 +485,35 @@ int collision(int x_move, int y_move)
 		g_main_map.tiles[new_pos_y][g_player.x]
 	};
 
+	//check if next space is an enemy
+	int enemy_tile = 0;
+
+	for ( int i = 0; i < g_enemy_num; i++ )
+		{
+			int check_x = g_map_enemies[i].x == new_pos_x;
+			int check_y = g_map_enemies[i].y == new_pos_y;
+			
+			if (check_x && check_y) 
+			{
+				enemy_tile = 1;
+				g_enemy = g_map_enemies[i];
+				break;
+			}
+		}
+	
 	//if path exsist true
 	int path = match(' ', seperate);
 
 	//if path exsists and final location empty move to final location
-    if ( combined == ' ' && path )
+    if ( combined == ' ' && path && !enemy_tile )
     {
         g_player.x = new_pos_x;
         g_player.y = new_pos_y;
     }
 	//if path open and final location is enemy flip battle flags
-	else if ( match(combined, g_enemy_tiles) && path )
+	else if ( enemy_tile && path )
 	{
 		g_text = "An enemy is attacking!";
-		g_enemy = get_enemy(combined);
 		g_battle_status = 1;
 	}
 
@@ -565,7 +603,7 @@ int controls_battle()
 	printf_input();			//input text
     char key = input();		//get input
 
-	// battle_turn();
+	battle_turn();
 
     return 0;
 }

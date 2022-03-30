@@ -3,6 +3,30 @@
 #include <stdio.h>
 #include <string.h>
 
+char* itoa(int value, char* result, int base) {
+    // check that the base if valid
+    if (base < 2 || base > 36) { *result = '\0'; return result; }
+
+    char* ptr = result, *ptr1 = result, tmp_char;
+    int tmp_value;
+
+    do {
+        tmp_value = value;
+        value /= base;
+        *ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
+    } while ( value );
+
+    // Apply negative sign
+    if (tmp_value < 0) *ptr++ = '-';
+    *ptr-- = '\0';
+    while(ptr1 < ptr) {
+        tmp_char = *ptr;
+        *ptr--= *ptr1;
+        *ptr1++ = tmp_char;
+    }
+    return result;
+}
+
 //structures
 struct Map 
 { //map structure
@@ -61,7 +85,7 @@ struct Entity g_player;
 int g_run;
 
 //output text to screen
-char* g_text;
+// char* g_text;
 
 //map tiles
 char* g_tiles;
@@ -277,7 +301,7 @@ int init_variables()
 { //initiates global variable values
 	
 	g_run = 1; 						//say to continue running game
-	g_text = "";					//output text is none
+	// g_text = "";					//output text is none
 	
 	g_battle_status = 0; 			//tells game to show battle screen
 	g_battle_win = 0;				//tells game if you won battle
@@ -434,7 +458,7 @@ struct Entity get_enemy(char sprite)
 	return enemy;
 }
 
-int battle_turn()
+char* battle_turn()
 {
 	int enemy_atk_value = rand() % 4;
 	struct Attack enemy_atk = g_enemy.attacks[enemy_atk_value];
@@ -456,11 +480,18 @@ int battle_turn()
 	
 	char text[100];
   	snprintf(text, sizeof(text), "The attacking %s used %s.", g_enemy.species, enemy_atk.name);
+	char bug[10];
+	itoa(damage, bug, 10);
+	//printf("%s", bug);
 
-	g_text = text;
+	// cout << damage;
+	
+	// text;
+	char* ret_text = text;
 	
 	input();
-	return 0;
+	// return 0;
+	return ret_text;
 }
 
 int battle_check(){
@@ -513,7 +544,7 @@ int collision(int x_move, int y_move)
 	//if path open and final location is enemy flip battle flags
 	else if ( enemy_tile && path )
 	{
-		g_text = "An enemy is attacking!";
+		// g_text = "An enemy is attacking!";
 		g_battle_status = 1;
 	}
 
@@ -586,30 +617,35 @@ int move(char key)
 }
 
 //controls
-int controls_map()
+
+char* controls_map()
 { //map screen input, controls and logic
+
+	char* text;
 	
 	printf_input();			//input text
     char key = input();		//get input
 	
     move(key);				//logic
 
-    return 0;
+    return text;
 }
 
-int controls_battle()
+char* controls_battle()
 { //battle screen input, controls and logic
+
+	char* text;
 	
 	printf_input();			//input text
     char key = input();		//get input
 
-	battle_turn();
+	text = battle_turn();
 
-    return 0;
+    return text;
 }
 
 //frames
-int frame_map()
+int frame_map(char* text)
 { //map display information
 
 	//create map with player
@@ -621,44 +657,46 @@ int frame_map()
 	//print functions
     printf_player(g_player);
     printf_map(visible_map);
-	printf_text(g_text);
+	printf_text(text);
 
     return 0;
 }
 
-int frame_battle()
+int frame_battle(char* text)
 { //battle display info
 	
 	//display functions
 	printf_player(g_player);
 	printf_enemy(g_enemy);
-	printf_text(g_text);
+	printf_text(text);
 	
 	return 0;
 }
 
 //laod
-int run_map()
+char* run_map(char* text)
 { //run all functions for map
 
 	//display
-	frame_map();
+	frame_map(text);
 	//logic
-	controls_map();
+	text = controls_map();
 
-	return 0;
+	return text;
 }
 
-int run_battle()
+char* run_battle(char* text)
 { //run all functions for map
+
+	// char* text;
 	
 	//display
-	frame_battle();
+	frame_battle(text);
 	
 	//logic
-	controls_battle();
+	text = controls_battle();
 
-	return 0;
+	return text;
 }
 
 int start()
@@ -672,17 +710,20 @@ int start()
 	//init random
 	srand(time(NULL));
 
+	
+	char* text;
+	
 	//game loop
     while(g_run)
 	{
 		//clear screen
 		clear();
-
+		
 		//next frame
 		if ( g_battle_status )	//if battle status run battle 
-			{ run_battle(); }
+			{ text = run_battle(text); }
 		else
-			{ run_map(); }		//else run map
+			{ text = run_map(text); }		//else run map
     }
 
     return 0;
